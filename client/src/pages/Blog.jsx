@@ -1,17 +1,21 @@
 
 import React from 'react'
 import { useParams } from 'react-router-dom'
-import { blog_data, assets, comments_data } from '../assets/assets'
+import { assets } from '../assets/assets'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Moment from 'moment'
 import Loader from '../components/Loader'
+import toast from 'react-hot-toast'
+import { useAppContext } from '../context/AppContext'
 
 const Blog = () => {
 
   const { id } = useParams()
+  const { axios } = useAppContext()
 
   const [data, setData] = React.useState(null)
+  const [notFound, setNotFound] = React.useState(false)
   const [comments, setComments] = React.useState([])
 
   // Form states
@@ -22,61 +26,85 @@ const Blog = () => {
   const [isPosting, setIsPosting] = React.useState(false)
 
   // Fetch blog data
-  const fetchBlogData = () => {
-    const blog = blog_data.find(item => item._id === id)
-    setData(blog)
+  const fetchBlogData = async () => {
+    try {
+      const res = await axios.get(`/api/blog/${id}`)
+      if (res.data.success) {
+        setData(res.data.blog)
+        setNotFound(false)
+      } else {
+        setNotFound(true)
+        toast.error(res.data.message)
+      }
+    } catch (error) {
+      setNotFound(true)
+      toast.error(error.message)
+    }
   }
 
-  // Fetch comments
-  const fetchComments = () => {
-    setComments(comments_data)
+  // Fetch approved comments
+  const fetchComments = async () => {
+    try {
+      const res = await axios.post('/api/blog/comments', { blogId: id })
+      if (res.data.success) setComments(res.data.comments)
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
   // Load blog and comments
   React.useEffect(() => {
+    setData(null)
+    setNotFound(false)
     fetchBlogData()
     fetchComments()
   }, [id])
 
   // Add comment
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Check empty fields
     if (!name.trim()) {
-      alert('Please enter your name.')
+      toast.error('Please enter your name.')
       return
     }
 
     if (!comment.trim()) {
-      alert('Please write a comment.')
+      toast.error('Please write a comment.')
       return
     }
 
-    setIsPosting(true)
+    try {
+      setIsPosting(true)
+      const res = await axios.post('/api/blog/add-comment', {
+        blog: id,
+        name: name.trim(),
+        content: comment.trim(),
+      })
 
-    // Create new comment
-    const newComment = {
-      _id: Date.now().toString(),
-      name: name.trim(),
-      content: comment.trim(),
-      createdAt: new Date()
-    }
-
-    // Add comment to the beginning
-    setComments(prevComments => [
-      newComment,
-      ...prevComments
-    ])
-
-    // Clear form
-    setName('')
-    setComment('')
-
-    // Small delay for button effect
-    setTimeout(() => {
+      if (res.data.success) {
+        toast.success(res.data.message)
+        setName('')
+        setComment('')
+      } else {
+        toast.error(res.data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
       setIsPosting(false)
-    }, 500)
+    }
+  }
+
+  // Blog does not exist (or is unpublished)
+  if (notFound) {
+    return (
+      <div>
+        <Navbar />
+        <p className="text-center text-gray-500 mt-32 mb-32">Blog not found.</p>
+        <Footer />
+      </div>
+    )
   }
 
   // Show loader while blog is loading

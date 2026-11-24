@@ -1,15 +1,21 @@
-
 import React from 'react'
-import { comments_data } from '../../assets/assets'
+import toast from 'react-hot-toast'
 import CommentTableItem from '../../components/admin/CommentTableItem'
+import { useAppContext } from '../../context/AppContext'
 
 const Comments = () => {
-
+  const { axios } = useAppContext()
   const [comments, setComments] = React.useState([])
   const [filter, setFilter] = React.useState('Not approved')
 
   const fetchComments = async () => {
-    setComments(comments_data)
+    try {
+      const { data } = await axios.get('/api/admin/comments')
+      if (data.success) setComments(data.comments)
+      else toast.error(data.message)
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
   React.useEffect(() => {
@@ -24,13 +30,10 @@ const Comments = () => {
         <h1>Comments</h1>
 
         <div className="flex gap-2 items-center">
-
           <button
             onClick={() => setFilter('Approved')}
             className={`shadow-custm-sm border rounded-full px-4 py-1 cursor-pointer text-xs ${
-              filter === 'Approved'
-                ? 'text-primary'
-                : 'text-gray-700'
+              filter === 'Approved' ? 'text-primary' : 'text-gray-700'
             }`}
           >
             Approved
@@ -39,58 +42,30 @@ const Comments = () => {
           <button
             onClick={() => setFilter('Not approved')}
             className={`shadow-custm-sm border rounded-full px-4 py-1 cursor-pointer text-xs ${
-              filter === 'Not approved'
-                ? 'text-primary'
-                : 'text-gray-700'
+              filter === 'Not approved' ? 'text-primary' : 'text-gray-700'
             }`}
           >
             Not Approved
           </button>
-
         </div>
 
       </div>
 
       <div className="relative h-4/5 max-w-3xl overflow-x-auto shadow rounded-lg bg-white mt-4 scrollbar-hide">
-
         <table className="w-full text-sm text-gray-500">
 
           <thead className="text-xs text-gray-700 text-left uppercase">
-
             <tr>
-
-              <th
-                scope="col"
-                className="px-6 py-3"
-              >
-                Blog Title & Comment
-              </th>
-
-              <th
-                scope="col"
-                className="px-6 py-3 max-sm:hidden"
-              >
-                Date
-              </th>
-
-              <th
-                scope="col"
-                className="px-6 py-3"
-              >
-                Actions
-              </th>
-
+              <th scope="col" className="px-6 py-3">Blog Title & Comment</th>
+              <th scope="col" className="px-6 py-3 max-sm:hidden">Date</th>
+              <th scope="col" className="px-6 py-3">Actions</th>
             </tr>
-
           </thead>
 
           <tbody>
-
             {comments
-              .filter(comment =>
-                filter === 'Approved'
-                  ? comment.isApproved === true
-                  : comment.isApproved === false
+              .filter((comment) =>
+                filter === 'Approved' ? comment.isApproved === true : comment.isApproved === false
               )
               .map((comment, index) => (
                 <CommentTableItem
@@ -100,11 +75,9 @@ const Comments = () => {
                   fetchComments={fetchComments}
                 />
               ))}
-
           </tbody>
 
         </table>
-
       </div>
 
     </div>
@@ -112,4 +85,3 @@ const Comments = () => {
 }
 
 export default Comments
-
