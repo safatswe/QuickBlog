@@ -16,6 +16,7 @@ const AddBlog = () => {
   const [category, setCategory] = useState('Technology')
   const [isPublished, setIsPublished] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   // "All" is only a filter on the home page, not a real category
   const categories = blogCategories.filter((item) => item !== 'All')
@@ -63,9 +64,28 @@ const AddBlog = () => {
     }
   }
 
-  const GenerateContent = () => {
-    // Day 3: AI generation will be added here
-    toast('AI generation will be added on Day 3')
+  const GenerateContent = async () => {
+    if (!title.trim()) return toast.error('Enter a blog title first')
+
+    const hasText = quillRef.current.getText().trim().length > 0
+    if (hasText && !window.confirm('Replace the current text with AI-generated content?')) return
+
+    try {
+      setIsGenerating(true)
+      const { data } = await axios.post('/api/blog/generate', { prompt: title.trim() })
+
+      if (data.success) {
+        // Converts the AI's HTML into the editor's format (and drops anything unsafe)
+        quillRef.current.clipboard.dangerouslyPasteHTML(data.content)
+        toast.success('Blog content generated')
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   useEffect(() => {
@@ -158,12 +178,19 @@ const AddBlog = () => {
 
           <div ref={editorRef}></div>
 
+          {isGenerating && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={GenerateContent}
-            className="absolute bottom-1 right-2 ml-2 text-xs text-white bg-black/70 px-4 py-1.5 rounded hover:underline cursor-pointer"
+            disabled={isGenerating}
+            className="absolute bottom-1 right-2 z-20 ml-2 text-xs text-white bg-black/70 px-4 py-1.5 rounded hover:underline cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Generate with AI
+            {isGenerating ? 'Generating...' : 'Generate with AI'}
           </button>
 
         </div>

@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import Blog from '../models/Blog.js'
 import Comment from '../models/Comment.js'
 import { uploadImage } from '../configs/cloudinary.js'
+import { generateText } from '../configs/ai.js'
 
 export const addBlog = async (req, res) => {
   try {
@@ -101,6 +102,36 @@ export const getBlogComments = async (req, res) => {
     const { blogId } = req.body
     const comments = await Comment.find({ blog: blogId, isApproved: true }).sort({ createdAt: -1 })
     res.json({ success: true, comments })
+  } catch (error) {
+    res.json({ success: false, message: error.message })
+  }
+}
+
+export const generateContent = async (req, res) => {
+  try {
+    const { prompt } = req.body
+
+    if (!prompt || !prompt.trim()) {
+      return res.json({ success: false, message: 'Please enter a blog title first' })
+    }
+    if (prompt.length > 200) {
+      return res.json({ success: false, message: 'Title is too long (max 200 characters)' })
+    }
+
+    const fullPrompt = `Write a complete, engaging blog post about: "${prompt.trim()}".
+
+Rules:
+- Output ONLY valid HTML using these tags: h2, h3, p, ul, ol, li, strong, em.
+- Do NOT include html, head, body or h1 tags, and do NOT use markdown or code fences.
+- Start with a short introduction paragraph, then write 3 to 4 sections, each with an h2 heading, and finish with a conclusion section.
+- Around 500 words, in a friendly and clear tone.`
+
+    let content = await generateText(fullPrompt)
+
+    // Remove code fences if the AI added them anyway
+    content = content.replace(/```html/gi, '').replace(/```/g, '').trim()
+
+    res.json({ success: true, content })
   } catch (error) {
     res.json({ success: false, message: error.message })
   }

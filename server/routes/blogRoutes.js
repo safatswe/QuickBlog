@@ -9,11 +9,13 @@ import {
   togglePublish,
   addComment,
   getBlogComments,
+  generateContent,
 } from '../controllers/blogController.js'
 
 const blogRouter = express.Router()
 
 blogRouter.post('/add', auth, upload.single('image'), addBlog)
+blogRouter.post('/generate', auth, generateContent)
 blogRouter.get('/all', getAllBlogs)
 blogRouter.get('/:blogId', getBlogById)
 blogRouter.post('/delete', auth, deleteBlogById)
