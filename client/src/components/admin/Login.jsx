@@ -15,7 +15,7 @@ const Login = () => {
       setLoading(true)
       const { data } = await axios.post('/api/admin/login', { email, password })
       if (data.success) {
-        login(data.token)
+        login(data.token, 'admin')
         toast.success('Logged in successfully')
       } else {
         toast.error(data.message)

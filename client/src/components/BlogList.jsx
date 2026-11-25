@@ -6,7 +6,16 @@ import { useAppContext } from '../context/AppContext'
 
 const BlogList = () => {
   const [menu, setMenu] = React.useState("All")
-  const { blogs, input } = useAppContext()
+  const { blogs, input, fetchBlogs } = useAppContext()
+
+  // Reload the blogs whenever this page opens, and when you come back to this browser tab,
+  // so newly approved blogs show up without a manual refresh
+  React.useEffect(() => {
+    fetchBlogs()
+    const onFocus = () => fetchBlogs()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
 
   // 1) apply the search text, 2) apply the category tab
   const filteredBlogs = blogs

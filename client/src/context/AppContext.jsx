@@ -7,25 +7,42 @@ axios.defaults.baseURL = import.meta.env.VITE_BASE_URL
 const AppContext = createContext()
 
 export const AppProvider = ({ children }) => {
-  // Load the saved token (if any) and attach it to every request
+  // Load the saved login (if any) and attach the token to every request.
+  // An old login without a role is cleared, so the person simply logs in again.
   const [token, setToken] = useState(() => {
     const saved = localStorage.getItem('token')
-    if (saved) axios.defaults.headers.common['Authorization'] = `Bearer ${saved}`
-    return saved
+    const savedRole = localStorage.getItem('role')
+    if (saved && savedRole) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${saved}`
+      return saved
+    }
+    localStorage.removeItem('token')
+    return null
   })
+  const [role, setRole] = useState(() => (localStorage.getItem('token') ? localStorage.getItem('role') : null))
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '')
   const [blogs, setBlogs] = useState([])
   const [input, setInput] = useState('')
 
-  const login = (newToken) => {
+  // role is 'admin' or 'user'
+  const login = (newToken, newRole = 'admin', name = '') => {
     localStorage.setItem('token', newToken)
+    localStorage.setItem('role', newRole)
+    localStorage.setItem('userName', name)
     axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
     setToken(newToken)
+    setRole(newRole)
+    setUserName(name)
   }
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    localStorage.removeItem('userName')
     delete axios.defaults.headers.common['Authorization']
     setToken(null)
+    setRole(null)
+    setUserName('')
   }
 
   const fetchBlogs = async () => {
@@ -54,7 +71,7 @@ export const AppProvider = ({ children }) => {
     return () => axios.interceptors.response.eject(id)
   }, [])
 
-  const value = { axios, token, login, logout, blogs, fetchBlogs, input, setInput }
+  const value = { axios, token, role, userName, login, logout, blogs, fetchBlogs, input, setInput }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
