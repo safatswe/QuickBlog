@@ -10,7 +10,7 @@ export const adminLogin = async (req, res) => {
       return res.json({ success: false, message: 'Invalid credentials' })
     }
 
-    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '7d' })
+    const token = jwt.sign({ email, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '7d' })
     res.json({ success: true, token })
   } catch (error) {
     res.json({ success: false, message: error.message })
@@ -19,7 +19,7 @@ export const adminLogin = async (req, res) => {
 
 export const getAllBlogsAdmin = async (req, res) => {
   try {
-    const blogs = await Blog.find({}).sort({ createdAt: -1 })
+    const blogs = await Blog.find({}).populate('author', 'name').sort({ createdAt: -1 })
     res.json({ success: true, blogs })
   } catch (error) {
     res.json({ success: false, message: error.message })
@@ -37,12 +37,16 @@ export const getAllComments = async (req, res) => {
 
 export const getDashboard = async (req, res) => {
   try {
-    const recentBlogs = await Blog.find({}).sort({ createdAt: -1 }).limit(5)
+    const recentBlogs = await Blog.find({}).populate('author', 'name').sort({ createdAt: -1 }).limit(5)
     const blogs = await Blog.countDocuments()
     const comments = await Comment.countDocuments()
-    const drafts = await Blog.countDocuments({ isPublished: false })
+    const pending = await Blog.countDocuments({ status: 'pending' })
+    const drafts = await Blog.countDocuments({
+      isPublished: false,
+      status: { $nin: ['pending', 'rejected'] },
+    })
 
-    res.json({ success: true, dashboardData: { blogs, comments, drafts, recentBlogs } })
+    res.json({ success: true, dashboardData: { blogs, comments, drafts, pending, recentBlogs } })
   } catch (error) {
     res.json({ success: false, message: error.message })
   }
@@ -63,6 +67,38 @@ export const approveCommentById = async (req, res) => {
     const { id } = req.body
     await Comment.findByIdAndUpdate(id, { isApproved: true })
     res.json({ success: true, message: 'Comment approved' })
+  } catch (error) {
+    res.json({ success: false, message: error.message })
+  }
+}
+
+// Accept a blog written by a user: it goes live on the site
+export const approveBlogById = async (req, res) => {
+  try {
+    const { id } = req.body
+    const blog = await Blog.findByIdAndUpdate(id, {
+      status: 'approved',
+      isPublished: true,
+      rejectionReason: '',
+    })
+    if (!blog) return res.json({ success: false, message: 'Blog not found' })
+    res.json({ success: true, message: 'Blog approved and published' })
+  } catch (error) {
+    res.json({ success: false, message: error.message })
+  }
+}
+
+// Reject a blog written by a user (with an optional reason the user can read)
+export const rejectBlogById = async (req, res) => {
+  try {
+    const { id, reason } = req.body
+    const blog = await Blog.findByIdAndUpdate(id, {
+      status: 'rejected',
+      isPublished: false,
+      rejectionReason: (reason || '').trim().slice(0, 300),
+    })
+    if (!blog) return res.json({ success: false, message: 'Blog not found' })
+    res.json({ success: true, message: 'Blog rejected' })
   } catch (error) {
     res.json({ success: false, message: error.message })
   }

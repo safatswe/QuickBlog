@@ -1,5 +1,7 @@
 import express from 'express'
 import auth from '../middleware/auth.js'
+import anyAuth from '../middleware/anyAuth.js'
+import limitAI from '../middleware/limitAI.js'
 import upload from '../middleware/multer.js'
 import {
   addBlog,
@@ -15,7 +17,7 @@ import {
 const blogRouter = express.Router()
 
 blogRouter.post('/add', auth, upload.single('image'), addBlog)
-blogRouter.post('/generate', auth, generateContent)
+blogRouter.post('/generate', anyAuth, limitAI, generateContent)
 blogRouter.get('/all', getAllBlogs)
 blogRouter.get('/:blogId', getBlogById)
 blogRouter.post('/delete', auth, deleteBlogById)

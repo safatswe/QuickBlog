@@ -75,7 +75,14 @@ export const togglePublish = async (req, res) => {
     const blog = await Blog.findById(id)
     if (!blog) return res.json({ success: false, message: 'Blog not found' })
 
-    blog.isPublished = !blog.isPublished
+       blog.isPublished = !blog.isPublished
+
+    // Publishing a blog also counts as accepting it
+    if (blog.isPublished) {
+      blog.status = 'approved'
+      blog.rejectionReason = ''
+    }
+
     await blog.save()
     res.json({ success: true, message: 'Blog status updated' })
   } catch (error) {
